@@ -369,9 +369,15 @@
     }
 
     let status = `Scan #${state.scanCount} — ${state.apCount} APs (${state.viewMode})`;
-    const osSsidCount = readMetricNumber(state.scanStats.last_scan_os_ssid_count);
-    const osBssidCount = readMetricNumber(state.scanStats.last_scan_os_bssid_count);
-    const parsedCount = readMetricNumber(state.scanStats.last_scan_parsed_count);
+    const osSsidCount = readMetricNumber(
+      state.scanStats.last_scan_os_ssid_count,
+    );
+    const osBssidCount = readMetricNumber(
+      state.scanStats.last_scan_os_bssid_count,
+    );
+    const parsedCount = readMetricNumber(
+      state.scanStats.last_scan_parsed_count,
+    );
 
     const diagParts = [];
     if (osSsidCount !== null) diagParts.push(`OS SSID: ${osSsidCount}`);
@@ -682,7 +688,10 @@
       dom.ssidModeReal.classList.toggle("active", isReal);
       dom.ssidModeObfuscated.classList.toggle("active", !isReal);
       dom.ssidModeReal.setAttribute("aria-selected", isReal ? "true" : "false");
-      dom.ssidModeObfuscated.setAttribute("aria-selected", isReal ? "false" : "true");
+      dom.ssidModeObfuscated.setAttribute(
+        "aria-selected",
+        isReal ? "false" : "true",
+      );
     }
 
     setText(dom.apIdentityMode, isReal ? "Show WiFi" : "SSID only");
