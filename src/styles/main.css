@@ -619,7 +619,11 @@ body::after {
 
 .ssid-btn.active {
   color: #061018;
-  background: linear-gradient(145deg, rgba(0, 255, 204, 0.92), rgba(148, 255, 236, 0.9));
+  background: linear-gradient(
+    145deg,
+    rgba(0, 255, 204, 0.92),
+    rgba(148, 255, 236, 0.9)
+  );
   box-shadow: 0 6px 18px rgba(0, 255, 204, 0.28);
 }
 
@@ -1331,7 +1335,11 @@ body::after {
 
 .render-btn.active {
   color: #061019;
-  background: linear-gradient(135deg, rgba(0, 255, 204, 0.9), rgba(129, 255, 232, 0.9));
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 204, 0.9),
+    rgba(129, 255, 232, 0.9)
+  );
   box-shadow: 0 6px 18px rgba(0, 255, 204, 0.25);
 }
 

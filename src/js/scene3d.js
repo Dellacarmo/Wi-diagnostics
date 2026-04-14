@@ -44,9 +44,14 @@ class RFScene3D {
     const rect = this.container.getBoundingClientRect();
     const width = Math.max(
       1,
-      Math.floor(rect.width || this.container.clientWidth || window.innerWidth || 1),
+      Math.floor(
+        rect.width || this.container.clientWidth || window.innerWidth || 1,
+      ),
     );
-    const fallbackHeight = Math.max(320, Math.floor((window.innerHeight || 720) - 92));
+    const fallbackHeight = Math.max(
+      320,
+      Math.floor((window.innerHeight || 720) - 92),
+    );
     const height = Math.max(
       1,
       Math.floor(rect.height || this.container.clientHeight || fallbackHeight),
@@ -885,8 +890,18 @@ class RFScene3D {
       }
       line.visible = true;
       const attr = line.geometry.attributes.position;
-      attr.setXYZ(0, aNode.mesh.position.x, aNode.mesh.position.y, aNode.mesh.position.z);
-      attr.setXYZ(1, bNode.mesh.position.x, bNode.mesh.position.y, bNode.mesh.position.z);
+      attr.setXYZ(
+        0,
+        aNode.mesh.position.x,
+        aNode.mesh.position.y,
+        aNode.mesh.position.z,
+      );
+      attr.setXYZ(
+        1,
+        bNode.mesh.position.x,
+        bNode.mesh.position.y,
+        bNode.mesh.position.z,
+      );
       attr.needsUpdate = true;
     }
   }
@@ -924,7 +939,8 @@ class RFScene3D {
     }
 
     if (this.originNode?.ring) this.originNode.ring.visible = !isNodes;
-    if (this.originNode?.pulseRing) this.originNode.pulseRing.visible = !isNodes;
+    if (this.originNode?.pulseRing)
+      this.originNode.pulseRing.visible = !isNodes;
 
     for (const node of Object.values(this.apNodes)) {
       this._applyRenderModeToNode(node);
@@ -943,7 +959,10 @@ class RFScene3D {
       };
     }
 
-    this._spherical.radius = Math.max(6.2, Math.min(this._spherical.radius, 10.5));
+    this._spherical.radius = Math.max(
+      6.2,
+      Math.min(this._spherical.radius, 10.5),
+    );
     this._spherical.phi = Math.max(0.95, Math.min(this._spherical.phi, 1.12));
     this._target.y = 0.28;
   }
@@ -983,7 +1002,11 @@ class RFScene3D {
     this.labelMode = next;
     for (const node of Object.values(this.apNodes)) {
       const band = (node.meta && node.meta.band) || "2.4GHz";
-      this._updateLabelSprite(node.label, this._resolveLabel(node.meta || {}), band);
+      this._updateLabelSprite(
+        node.label,
+        this._resolveLabel(node.meta || {}),
+        band,
+      );
     }
   }
 
@@ -1083,14 +1106,22 @@ class RFScene3D {
   _animateAPNodes(delta, time) {
     for (const [bssid, node] of Object.entries(this.apNodes)) {
       const isNodes = this.renderMode === "nodes";
-      const fallbackSeed = parseInt(String(bssid || "").replace(/:/g, "").slice(-6), 16) || 1;
+      const fallbackSeed =
+        parseInt(
+          String(bssid || "")
+            .replace(/:/g, "")
+            .slice(-6),
+          16,
+        ) || 1;
       const fallbackAngle = ((fallbackSeed % 360) * Math.PI) / 180;
 
       const targetVector = node.targetPos.clone();
       if (isNodes) {
         const planar = new THREE.Vector2(targetVector.x, targetVector.z);
         if (planar.lengthSq() < 0.15) {
-          planar.set(Math.cos(fallbackAngle), Math.sin(fallbackAngle)).multiplyScalar(1.25);
+          planar
+            .set(Math.cos(fallbackAngle), Math.sin(fallbackAngle))
+            .multiplyScalar(1.25);
         } else if (planar.length() < 1.25) {
           planar.setLength(1.25);
         }
@@ -1167,7 +1198,8 @@ class RFScene3D {
       const quality = node.meta.signal_quality || 50;
       const glowIntensity = 0.4 + (quality / 100) * 0.4;
       node.mesh.material.emissiveIntensity =
-        glowIntensity + Math.sin(time * 2 + node.targetPos.z * 5) * (isNodes ? 0.05 : 0.1);
+        glowIntensity +
+        Math.sin(time * 2 + node.targetPos.z * 5) * (isNodes ? 0.05 : 0.1);
     }
 
     this._updateGraphLinksPositions();
