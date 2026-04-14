@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RF Space Observatory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     BOOT SCREEN
+══════════════════════════════════════════════ -->
+<div id="boot-screen" class="boot-screen">
+    <div class="boot-particles" id="boot-particles"></div>
+    <div class="boot-content">
+        <div class="boot-logo-ring">
+            <div class="ring r1"></div>
+            <div class="ring r2"></div>
+            <div class="ring r3"></div>
+            <span class="boot-emoji">🛰️</span>
+        </div>
+        <h1 class="boot-title">RF SPACE OBSERVATORY</h1>
+        <div class="boot-subtitle">WiFi Network Diagnostic & 3D RF Space Mapping</div>
+        <div class="boot-progress-wrap">
+            <div class="boot-progress">
+                <div class="boot-progress-bar" id="boot-progress-bar"></div>
+                <div class="boot-progress-glow"></div>
+            </div>
+            <span class="boot-pct" id="boot-pct">0%</span>
+        </div>
+        <div class="boot-status" id="boot-status">Initializing systems...</div>
+        <div class="boot-steps" id="boot-steps">
+            <span class="bstep done" id="bs-renderer">Renderer</span>
+            <span class="bstep" id="bs-scanner">Scanner</span>
+            <span class="bstep" id="bs-ws">WebSocket</span>
+            <span class="bstep" id="bs-ready">Ready</span>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════ -->
+<div id="app" class="app hidden">
+
+    <!-- ── TOP BAR ── -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-brand">
+                <span class="topbar-icon">🛰️</span>
+                <span class="topbar-title">RF Space Observatory</span>
+                <span class="topbar-ver">v1.0</span>
+            </div>
+        </div>
+
+        <div class="topbar-center">
+            <div class="conn-pill" id="connection-status">
+                <span class="conn-dot disconnected" id="conn-dot"></span>
+                <span class="conn-label" id="conn-label">Disconnected</span>
+            </div>
+            <div class="topbar-live-stats">
+                <div class="ls-item">
+                    <span class="ls-icon">📡</span>
+                    <span class="ls-val" id="scan-count">0</span>
+                    <span class="ls-lbl">scans</span>
+                </div>
+                <div class="ls-sep">·</div>
+                <div class="ls-item">
+                    <span class="ls-icon">📶</span>
+                    <span class="ls-val" id="ap-count">0</span>
+                    <span class="ls-lbl">APs</span>
+                </div>
+                <div class="ls-sep">·</div>
+                <div class="ls-item">
+                    <span class="ls-icon">⏱</span>
+                    <span class="ls-val" id="uptime">00:00</span>
+                    <span class="ls-lbl">uptime</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="topbar-right">
+            <!-- EXPORT BUTTONS — always visible in header -->
+            <div class="export-group">
+                <span class="export-label">Export</span>
+                <button class="export-btn pdf" id="btn-pdf" title="Generate PDF Report">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    PDF
+                </button>
+                <button class="export-btn word" id="btn-word" title="Generate Word Document">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+                    DOCX
+                </button>
+                <button class="export-btn excel" id="btn-excel" title="Generate Excel Workbook">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+                    XLSX
+                </button>
+                <button class="export-btn all" id="btn-all" title="Generate All Reports">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                    ALL
+                </button>
+            </div>
+
+            <div class="topbar-divider"></div>
+
+            <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- ── MAIN WORKSPACE ── -->
+    <div class="workspace">
+
+        <!-- LEFT SIDE PANEL -->
+        <aside class="left-panel" id="left-panel">
+
+            <!-- Network Config -->
+            <div class="panel-section" id="section-network">
+                <div class="section-head">
+                    <span class="section-icon">🌐</span>
+                    <span class="section-title">Network Config</span>
+                    <span class="live-badge">LIVE</span>
+                </div>
+                <div class="section-body">
+                    <div class="kv-grid">
+                        <div class="kv-row">
+                            <span class="kv-key">Hostname</span>
+                            <span class="kv-val" id="net-hostname">—</span>
+                        </div>
+                        <div class="kv-row">
+                            <span class="kv-key">Local IP</span>
+                            <span class="kv-val accent-cyan" id="net-local-ip">—</span>
+                        </div>
+                        <div class="kv-row">
+                            <span class="kv-key">Gateway</span>
+                            <span class="kv-val accent-cyan" id="net-gateway">—</span>
+                        </div>
+                        <div class="kv-row">
+                            <span class="kv-key">WiFi</span>
+                            <span class="kv-val small" id="net-wifi-adapter">—</span>
+                        </div>
+                        <div class="kv-row">
+                            <span class="kv-key">OS</span>
+                            <span class="kv-val" id="net-os">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Band Stats -->
+            <div class="panel-section">
+                <div class="section-head">
+                    <span class="section-icon">📊</span>
+                    <span class="section-title">Band Statistics</span>
+                </div>
+                <div class="section-body">
+                    <div class="band-grid">
+                        <div class="band-card cyan">
+                            <div class="band-val" id="stat-24ghz">0</div>
+                            <div class="band-name">2.4 GHz</div>
+                            <div class="band-bar"><div class="band-fill" id="bar-24ghz"></div></div>
+                        </div>
+                        <div class="band-card magenta">
+                            <div class="band-val" id="stat-5ghz">0</div>
+                            <div class="band-name">5 GHz</div>
+                            <div class="band-bar"><div class="band-fill" id="bar-5ghz"></div></div>
+                        </div>
+                        <div class="band-card amber">
+                            <div class="band-val" id="stat-avg-rssi">—</div>
+                            <div class="band-name">Avg RSSI</div>
+                            <div class="band-bar"><div class="band-fill" id="bar-rssi"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Signal spectrum mini chart -->
+                    <div class="spectrum-wrap">
+                        <div class="spectrum-label">Signal Spectrum</div>
+                        <div class="signal-spectrum" id="signal-spectrum"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AP List -->
+            <div class="panel-section flex-grow" id="section-aps">
+                <div class="section-head">
+                    <span class="section-icon">📶</span>
+                    <span class="section-title">Access Points</span>
+                    <span class="count-badge" id="ap-list-count">0</span>
+                </div>
+                <div class="section-body no-pad">
+                    <div class="ap-list" id="ap-list">
+                        <div class="list-empty">⏳ Waiting for scan data...</div>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- CENTER VIEWPORT -->
+        <section class="viewport-section">
+            <div id="three-container" class="three-container"></div>
+
+            <!-- Top badges -->
+            <div class="vp-top-badges">
+                <div class="vp-badge">
+                    <span class="vp-badge-dot cyan"></span>
+                    <span>2.4 GHz</span>
+                </div>
+                <div class="vp-badge">
+                    <span class="vp-badge-dot magenta"></span>
+                    <span>5 GHz</span>
+                </div>
+                <div class="vp-badge">
+                    <span class="vp-badge-dot amber"></span>
+                    <span>Origin</span>
+                </div>
+            </div>
+
+            <!-- Bottom hint -->
+            <div class="vp-hint">
+                Drag to rotate · Scroll to zoom · Right-click to pan
+            </div>
+
+            <!-- Convergence -->
+            <div class="convergence-indicator" id="convergence-indicator">
+                <div class="conv-ring"></div>
+                <span>Converging...</span>
+            </div>
+
+            <!-- Outage alert ribbon -->
+            <div class="outage-ribbon hidden" id="outage-ribbon">
+                <span class="outage-icon">🔴</span>
+                <span class="outage-msg" id="outage-msg">Connection outage detected</span>
+                <button class="outage-close" id="outage-close">✕</button>
+            </div>
+        </section>
+
+        <!-- RIGHT SIDE PANEL -->
+        <aside class="right-panel" id="right-panel">
+
+            <!-- Export Panel — always visible -->
+            <div class="panel-section export-section">
+                <div class="section-head">
+                    <span class="section-icon">📤</span>
+                    <span class="section-title">Export Reports</span>
+                </div>
+                <div class="section-body">
+                    <div class="export-status" id="export-status">
+                        <span class="es-dot"></span>
+                        <span class="es-text">Ready to export</span>
+                    </div>
+                    <div class="export-cards">
+                        <button class="ec-btn ec-pdf" data-format="pdf">
+                            <div class="ec-header">
+                                <span class="ec-icon">📄</span>
+                                <span class="ec-format">PDF</span>
+                            </div>
+                            <div class="ec-desc">Dashboard + charts + AP table</div>
+                            <div class="ec-action">Generate PDF →</div>
+                        </button>
+                        <button class="ec-btn ec-word" data-format="word">
+                            <div class="ec-header">
+                                <span class="ec-icon">📝</span>
+                                <span class="ec-format">DOCX</span>
+                            </div>
+                            <div class="ec-desc">Formatted Word document</div>
+                            <div class="ec-action">Generate DOCX →</div>
+                        </button>
+                        <button class="ec-btn ec-excel" data-format="excel">
+                            <div class="ec-header">
+                                <span class="ec-icon">📊</span>
+                                <span class="ec-format">XLSX</span>
+                            </div>
+                            <div class="ec-desc">Workbook with multiple sheets</div>
+                            <div class="ec-action">Generate XLSX →</div>
+                        </button>
+                        <button class="ec-btn ec-all" data-format="all">
+                            <div class="ec-header">
+                                <span class="ec-icon">🚀</span>
+                                <span class="ec-format">ALL</span>
+                            </div>
+                            <div class="ec-desc">Export PDF + DOCX + XLSX</div>
+                            <div class="ec-action">Generate All →</div>
+                        </button>
+                    </div>
+                    <div class="export-log" id="export-log"></div>
+                </div>
+            </div>
+
+            <!-- Scan Health -->
+            <div class="panel-section">
+                <div class="section-head">
+                    <span class="section-icon">🩺</span>
+                    <span class="section-title">Scan Health</span>
+                </div>
+                <div class="section-body">
+                    <div class="health-grid">
+                        <div class="hg-item">
+                            <div class="hg-bar-wrap">
+                                <div class="hg-bar-fill cyan" id="hbar-strong"></div>
+                            </div>
+                            <div class="hg-label">Strong (>–50)</div>
+                            <div class="hg-val cyan" id="hval-strong">0</div>
+                        </div>
+                        <div class="hg-item">
+                            <div class="hg-bar-wrap">
+                                <div class="hg-bar-fill amber" id="hbar-medium"></div>
+                            </div>
+                            <div class="hg-label">Medium</div>
+                            <div class="hg-val amber" id="hval-medium">0</div>
+                        </div>
+                        <div class="hg-item">
+                            <div class="hg-bar-wrap">
+                                <div class="hg-bar-fill red" id="hbar-weak"></div>
+                            </div>
+                            <div class="hg-label">Weak (<–70)</div>
+                            <div class="hg-val red" id="hval-weak">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log Monitor -->
+            <div class="panel-section flex-grow">
+                <div class="section-head">
+                    <span class="section-icon">🖥️</span>
+                    <span class="section-title">Syslog Monitor</span>
+                    <div class="udp-badge">UDP :1514</div>
+                </div>
+                <div class="section-body no-pad">
+                    <div class="log-list" id="log-list">
+                        <div class="list-empty">No syslog received</div>
+                    </div>
+                </div>
+                <div class="log-footer">
+                    <span class="log-counter" id="log-counter">0 entries</span>
+                    <button class="tiny-btn" id="btn-clear-log">Clear</button>
+                </div>
+            </div>
+
+        </aside>
+
+    </div><!-- /workspace -->
+
+    <!-- ── BOTTOM STATUS BAR ── -->
+    <footer class="statusbar">
+        <div class="sb-left">
+            <span class="sb-item" id="sb-os">—</span>
+            <span class="sb-sep">|</span>
+            <span class="sb-item">WS: <span id="sb-ws-url">ws://127.0.0.1:8765</span></span>
+            <span class="sb-sep">|</span>
+            <span class="sb-item">HTTP: <span id="sb-http">—</span></span>
+        </div>
+        <div class="sb-center">
+            <span class="sb-item" id="sb-scan-status">Idle</span>
+        </div>
+        <div class="sb-right">
+            <span class="sb-item">RF Space Observatory v1.0.0</span>
+        </div>
+    </footer>
+
+</div><!-- /app -->
+
+<!-- Three.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- App scripts -->
+<script src="js/scene3d.js"></script>
+<script src="js/websocket-client.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
