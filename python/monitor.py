@@ -47,9 +47,16 @@ class RFSpaceObservatory:
         # Network auto-configuration
         self.network_config = NetworkConfig()
         print(f"[observatory] 📡 Network: {self.network_config.local_ip} @ {self.network_config.hostname}")
+        if self.network_config.active_wifi_ssid:
+            print(
+                "[observatory] 📶 Active WiFi: "
+                f"{self.network_config.active_wifi_ssid}"
+                f" ({self.network_config.active_wifi_interface or 'auto'})"
+            )
 
         # WiFi Scanner
-        self.scanner = WiFiScanner()
+        scan_interface = getattr(self.args, 'scan_interface', None) or self.network_config.get_scan_interface()
+        self.scanner = WiFiScanner(interface_name=scan_interface)
         scan_interval = getattr(self.args, 'scan_interval', 2.0)
         self.scanner._scan_interval = scan_interval
 
@@ -69,6 +76,7 @@ class RFSpaceObservatory:
 
         # Wire up callbacks
         self._setup_callbacks()
+        self.ws_server.set_report_handler(self._handle_report_request)
 
         # Shared state
         self._state_lock = threading.Lock()
@@ -183,6 +191,7 @@ class RFSpaceObservatory:
         print(f"[observatory] 🌐 WebSocket: ws://127.0.0.1:{self.ws_server.port}")
         print(f"[observatory] 📡 Log listener: UDP port {self.log_listener.port}")
         print(f"[observatory] 🛰️ WiFi scanning: every {self.scanner._scan_interval}s")
+        print(f"[observatory] 🔎 Scan source: {self.network_config.scan_interface or 'auto'}")
         print(f"[observatory] 💻 Open frontend: src/index.html")
         print()
         print("[observatory] Press Ctrl+C to stop and generate report...")
@@ -248,6 +257,75 @@ class RFSpaceObservatory:
 
         return results
 
+    def _collect_report_data(self) -> Dict[str, Any]:
+        """Collect current state for report generation."""
+        with self._state_lock:
+            return {
+                "access_points": self._latest_data.get("access_points", []),
+                "scan_stats": self._latest_data.get("scan_stats", {}),
+                "log_stats": self._latest_data.get("log_stats", {}),
+                "outages": self.log_listener.get_quedas(),
+                "network_config": self.network_config.get_ifconfig_summary(),
+                "positions": self._latest_data.get("positions", {}),
+            }
+
+    def _handle_report_request(self, request: Dict[str, Any]):
+        """Handle frontend-triggered report generation requests."""
+        report_format = str((request or {}).get("format", "all")).lower()
+
+        data = self._collect_report_data()
+        generator = self.report_generator
+
+        def emit_success(fmt: str, path: str):
+            self.ws_server.broadcast("report_done", {
+                "format": fmt,
+                "filename": os.path.basename(path),
+                "path": path,
+            })
+
+        def emit_error(fmt: str, err: str):
+            self.ws_server.broadcast("report_error", {
+                "format": fmt,
+                "error": err,
+            })
+
+        try:
+            if report_format == "all":
+                results = generator.generate_all(data)
+                any_success = False
+
+                for fmt in ("pdf", "word", "excel"):
+                    if fmt in results:
+                        emit_success(fmt, results[fmt])
+                        any_success = True
+                    elif f"{fmt}_error" in results:
+                        emit_error(fmt, results[f"{fmt}_error"])
+
+                if not any_success:
+                    emit_error("all", "No report format available. Install report dependencies.")
+                return
+
+            format_map = {
+                "pdf": ("has_reportlab", generator.generate_pdf),
+                "word": ("has_docx", generator.generate_word),
+                "excel": ("has_openpyxl", generator.generate_excel),
+            }
+
+            if report_format not in format_map:
+                emit_error(report_format, f"Unsupported report format: {report_format}")
+                return
+
+            dep_flag, generator_fn = format_map[report_format]
+            if not getattr(generator, dep_flag, False):
+                emit_error(report_format, f"Dependency for {report_format} report not installed")
+                return
+
+            path = generator_fn(data)
+            emit_success(report_format, path)
+
+        except Exception as e:
+            emit_error(report_format, str(e))
+
     def run(self):
         """Run the observatory (blocking)."""
         self.start()
@@ -278,6 +356,10 @@ def parse_args():
     parser.add_argument(
         "--scan-interval", type=float, default=2.0,
         help="Seconds between WiFi scans (default: 2.0)"
+    )
+    parser.add_argument(
+        "--scan-interface", type=str, default=None,
+        help="Specific WiFi interface/device to scan (auto-detected by default)"
     )
     parser.add_argument(
         "--ws-port", type=int, default=8765,
