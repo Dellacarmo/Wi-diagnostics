@@ -35,6 +35,7 @@ class WebSocketServer:
         self._running = False
         self._message_queue: List[Dict[str, Any]] = []
         self._queue_lock = threading.Lock()
+        self._report_handler = None
 
     def start(self):
         """Start the WebSocket server in a background thread."""
@@ -116,10 +117,31 @@ class WebSocketServer:
 
         elif msg_type == "generate_report":
             # Frontend wants a report generated
-            await websocket.send(json.dumps({
-                "type": "report_request",
-                "data": data.get("data", {})
-            }))
+            request_data = data.get("data", {})
+            if not isinstance(request_data, dict):
+                request_data = {}
+
+            report_format = request_data.get("format", "all")
+
+            if self._report_handler:
+                threading.Thread(
+                    target=self._safe_report_handler_call,
+                    args=(request_data,),
+                    daemon=True
+                ).start()
+
+                await websocket.send(json.dumps({
+                    "type": "report_request_ack",
+                    "data": {"status": "accepted", "format": report_format}
+                }))
+            else:
+                await websocket.send(json.dumps({
+                    "type": "report_error",
+                    "data": {
+                        "format": report_format,
+                        "error": "Report handler not configured on backend"
+                    }
+                }))
 
     async def _flush_queue(self):
         """Flush queued messages to all connected clients."""
@@ -185,6 +207,7 @@ class WebSocketServer:
             for ap in ap_list:
                 ap_meta[ap.bssid] = {
                     "ssid_label": ap.ssid_label,
+                    "ssid_raw": ap.ssid_raw,
                     "band": ap.band,
                     "rssi_mean": round(ap.rssi_mean, 1),
                     "signal_quality": round(ap.signal_quality, 1),
@@ -219,6 +242,22 @@ class WebSocketServer:
     def broadcast_outage(self, outage_data: Dict):
         """Broadcast an outage event."""
         self.broadcast("outage", outage_data)
+
+    def set_report_handler(self, handler):
+        """Register callback for frontend report generation requests."""
+        self._report_handler = handler
+
+    def _safe_report_handler_call(self, request_data: Dict[str, Any]):
+        """Invoke report handler safely from a worker thread."""
+        try:
+            if self._report_handler:
+                self._report_handler(request_data)
+        except Exception as e:
+            report_format = request_data.get("format", "all") if isinstance(request_data, dict) else "all"
+            self.broadcast("report_error", {
+                "format": report_format,
+                "error": str(e),
+            })
 
     def stop(self):
         """Stop the WebSocket server."""

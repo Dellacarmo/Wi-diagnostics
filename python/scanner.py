@@ -9,7 +9,10 @@ import subprocess
 import re
 import hashlib
 import time
+import ctypes
+import locale
 import threading
+import unicodedata
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
@@ -80,8 +83,9 @@ class WiFiScanner:
     PATH_LOSS_EXPONENT = 2.7  # Indoor environment typical value
     REF_DISTANCE = 1.0     # Reference distance in meters
 
-    def __init__(self):
+    def __init__(self, interface_name: Optional[str] = None):
         self.os_type = platform.system()
+        self.interface_name = interface_name
         self.access_points: Dict[str, AccessPoint] = {}  # Key: BSSID
         self.ssid_counter = 0
         self.ssid_map: Dict[str, str] = {}  # BSSID -> obfuscated label
@@ -91,6 +95,26 @@ class WiFiScanner:
         self._scan_interval = 2.0  # seconds between scans
         self._callbacks: List[Any] = []  # Called after each scan with AP list
         self.total_scans = 0
+        self._last_scan_command = ""
+        self._last_scan_os_ssid_count = 0
+        self._last_scan_os_bssid_count = 0
+        self._last_scan_parsed_count = 0
+        self._last_scan_timestamp = None
+
+    def _record_scan_metrics(
+        self,
+        command: List[str],
+        os_ssid_count: int,
+        os_bssid_count: int,
+        parsed_count: int,
+    ):
+        """Store raw scan diagnostics for UI transparency and troubleshooting."""
+        with self._lock:
+            self._last_scan_command = " ".join(command)
+            self._last_scan_os_ssid_count = int(max(0, os_ssid_count))
+            self._last_scan_os_bssid_count = int(max(0, os_bssid_count))
+            self._last_scan_parsed_count = int(max(0, parsed_count))
+            self._last_scan_timestamp = datetime.now().isoformat()
 
     def on_scan_complete(self, callback):
         """Register a callback to be called after each scan."""
@@ -151,98 +175,222 @@ class WiFiScanner:
         """Create a deterministic hash of BSSID for positioning seed."""
         return hashlib.md5(bssid.encode()).hexdigest()
 
+    def _decode_output(self, data: bytes) -> str:
+        """Decode command output with locale-aware fallback encodings."""
+        if isinstance(data, str):
+            return data
+
+        encodings = []
+
+        if self.os_type == "Windows":
+            try:
+                oem_cp = ctypes.windll.kernel32.GetOEMCP()
+                if oem_cp:
+                    encodings.append(f"cp{oem_cp}")
+            except Exception:
+                pass
+
+            try:
+                ansi_cp = ctypes.windll.kernel32.GetACP()
+                if ansi_cp:
+                    encodings.append(f"cp{ansi_cp}")
+            except Exception:
+                pass
+
+            encodings.extend(["utf-8", "cp850", "cp1252", "mbcs", "latin-1"])
+        else:
+            encodings.extend(["utf-8", "latin-1"])
+
+        preferred = locale.getpreferredencoding(False)
+        if preferred:
+            encodings.insert(0, preferred)
+
+        seen = set()
+        for encoding in encodings:
+            enc = (encoding or "").strip().lower()
+            if not enc or enc in seen:
+                continue
+            seen.add(enc)
+            try:
+                return data.decode(enc)
+            except UnicodeDecodeError:
+                continue
+
+        return data.decode("utf-8", errors="replace")
+
+    def _normalize_text(self, value: str) -> str:
+        """Normalize keys/text for locale-agnostic parsing."""
+        if not value:
+            return ""
+        normalized = unicodedata.normalize("NFKD", value)
+        normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+        return normalized.strip().lower()
+
+    def _split_escaped_fields(self, line: str, sep: str = ":") -> List[str]:
+        """Split a nmcli terse line honoring escaped separators."""
+        fields: List[str] = []
+        current: List[str] = []
+        escaped = False
+
+        for ch in line:
+            if escaped:
+                current.append(ch)
+                escaped = False
+                continue
+
+            if ch == "\\":
+                escaped = True
+                continue
+
+            if ch == sep:
+                fields.append("".join(current))
+                current = []
+                continue
+
+            current.append(ch)
+
+        fields.append("".join(current))
+        return fields
+
+    def _unescape_nmcli_field(self, value: str) -> str:
+        return value.replace("\\:", ":").replace("\\\\", "\\").strip()
+
     def scan_windows(self) -> List[Dict[str, Any]]:
         """Scan WiFi networks on Windows using netsh."""
         aps = []
+        command = ["netsh", "wlan", "show", "networks", "mode=bssid"]
+        observed_ssid_count = 0
+        observed_bssid_count = 0
         try:
+            if self.interface_name:
+                # Interface-scoped scans are more reliable on Windows adapters that expose
+                # primary/secondary virtual interfaces (for example Wi-Fi 7 MLO devices).
+                command.append(f"interface={self.interface_name}")
+
             result = subprocess.run(
-                ["netsh", "wlan", "show", "networks", "mode=bssid"],
-                capture_output=True, text=True, timeout=30,
-                encoding="utf-8", errors="replace"
+                command,
+                capture_output=True,
+                text=False,
+                timeout=30,
             )
-            output = result.stdout
+            output = self._decode_output(result.stdout)
 
-            current_ap = {}
-            current_bssid = None
+            current_ssid = "Hidden"
+            current_security = "Unknown"
+            current_ap: Optional[Dict[str, Any]] = None
 
-            for line in output.split("\n"):
-                line = line.strip()
+            def finalize_current_ap():
+                nonlocal current_ap
+                if current_ap and current_ap.get("bssid"):
+                    aps.append(self._finalize_windows_ap(current_ap, current_ap["bssid"]))
+                current_ap = None
 
-                # SSID line
-                if line.startswith("SSID") and ":" in line and "BSSID" not in line:
-                    if current_ap.get("ssid") and current_bssid:
-                        aps.append(self._finalize_windows_ap(current_ap, current_bssid))
-                    current_ap = {}
-                    current_bssid = None
-                    ssid = line.split(":", 1)[1].strip()
-                    current_ap["ssid"] = ssid
+            for raw_line in output.splitlines():
+                line = raw_line.strip()
+                if not line:
+                    continue
 
-                # BSSID line
-                if "BSSID" in line and ":" in line:
-                    bssid = line.split(":", 1)[1].strip()
-                    current_bssid = bssid
+                # SSID header block: "SSID 1 : ..."
+                ssid_match = re.match(r"^SSID\s+\d+\s*:\s*(.*)$", line, flags=re.IGNORECASE)
+                if ssid_match and "BSSID" not in line.upper():
+                    finalize_current_ap()
+                    observed_ssid_count += 1
+                    current_ssid = ssid_match.group(1).strip() or "Hidden"
+                    current_security = "Unknown"
+                    continue
 
-                # Signal
-                if "Signal" in line or "Sinal" in line:
-                    signal_str = line.split(":", 1)[1].strip().rstrip("%")
+                # BSSID row block: "BSSID 1 : xx:xx:..."
+                bssid_match = re.match(
+                    r"^BSSID\s+\d+\s*:\s*([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})",
+                    line,
+                    flags=re.IGNORECASE,
+                )
+                if bssid_match:
+                    finalize_current_ap()
+                    observed_bssid_count += 1
+                    current_ap = {
+                        "ssid": current_ssid,
+                        "bssid": bssid_match.group(1).upper(),
+                        "security": current_security,
+                        "signal_quality": 0.0,
+                        "rssi": -85.0,
+                        "channel": 0,
+                        "band_hint": "2.4GHz",
+                    }
+                    continue
+
+                if ":" not in line:
+                    continue
+
+                key_raw, value_raw = line.split(":", 1)
+                key = self._normalize_text(key_raw)
+                key_compact = re.sub(r"\s+", " ", key)
+                value = value_raw.strip()
+
+                # Security sometimes appears before any BSSID line; keep SSID-level default.
+                if current_ap is None:
+                    if "authentication" in key or "autentic" in key:
+                        current_security = value or "Unknown"
+                    elif ("encryption" in key or "criptografia" in key) and current_security == "Unknown":
+                        current_security = value or "Unknown"
+                    continue
+
+                if key_compact in ("signal", "sinal"):
+                    signal_str = value.rstrip("%")
                     try:
                         quality = float(signal_str)
                         current_ap["signal_quality"] = quality
                         current_ap["rssi"] = self.quality_to_rssi(quality)
                     except ValueError:
-                        current_ap["signal_quality"] = 50
-                        current_ap["rssi"] = -75
+                        current_ap["signal_quality"] = 50.0
+                        current_ap["rssi"] = -75.0
+                    continue
 
-                # Channel (from Radio type or Channel line)
-                if "Channel" in line or "Canal" in line:
-                    ch_str = line.split(":", 1)[1].strip()
+                if key_compact in ("channel", "canal"):
                     try:
-                        current_ap["channel"] = int(ch_str)
+                        current_ap["channel"] = int(value)
                     except ValueError:
-                        current_ap["channel"] = 0
+                        # Keep previous channel if line is not a pure channel number.
+                        pass
+                    continue
 
-                # Authentication
-                if "Authentication" in line or "Autenticação" in line:
-                    current_ap["security"] = line.split(":", 1)[1].strip()
+                if "authentication" in key_compact or "autentic" in key_compact:
+                    current_ap["security"] = value or current_ap.get("security", "Unknown")
+                    continue
 
-                # Encryption
-                if "Encryption" in line or "Criptografia" in line:
-                    enc = line.split(":", 1)[1].strip()
-                    if not current_ap.get("security"):
-                        current_ap["security"] = enc
+                if "encryption" in key_compact or "criptografia" in key_compact:
+                    if current_ap.get("security", "Unknown") == "Unknown":
+                        current_ap["security"] = value or "Unknown"
+                    continue
 
-                # Radio type
-                if "Radio type" in line or "Tipo de rádio" in line:
-                    radio = line.split(":", 1)[1].strip()
-                    if "802.11a" in radio or "802.11ac" in radio or "802.11ax" in radio:
+                if "radio type" in key_compact or "tipo de radio" in key_compact:
+                    radio = value.lower()
+                    if any(tok in radio for tok in ("802.11a", "802.11ac", "802.11ax", "802.11be")):
                         current_ap["band_hint"] = "5GHz"
                     else:
                         current_ap["band_hint"] = "2.4GHz"
+                    continue
 
-                # Band (Portuguese Windows: "Banda : 5 GHz")
-                if "Banda" in line and ":" in line and "SSID" not in line:
-                    band_val = line.split(":", 1)[1].strip().lower()
+                if key_compact.startswith("band") or key_compact == "banda":
+                    band_val = value.lower()
                     if "5" in band_val:
                         current_ap["band_hint"] = "5GHz"
                     elif "2.4" in band_val:
                         current_ap["band_hint"] = "2.4GHz"
 
-                # Band (English: "Band : 5 GHz")
-                if line.strip().startswith("Band") and ":" in line and "BSSID" not in line:
-                    band_val = line.split(":", 1)[1].strip().lower()
-                    if "5" in band_val:
-                        current_ap["band_hint"] = "5GHz"
-                    elif "2.4" in band_val:
-                        current_ap["band_hint"] = "2.4GHz"
-
-            # Don't forget the last AP
-            if current_ap.get("ssid") and current_bssid:
-                aps.append(self._finalize_windows_ap(current_ap, current_bssid))
+            finalize_current_ap()
 
         except subprocess.TimeoutExpired:
             print("[scanner] ⚠️ netsh scan timed out")
         except Exception as e:
             print(f"[scanner] Error scanning Windows: {e}")
+
+        self._record_scan_metrics(
+            command,
+            os_ssid_count=observed_ssid_count,
+            os_bssid_count=observed_bssid_count,
+            parsed_count=len(aps),
+        )
 
         return aps
 
@@ -272,27 +420,44 @@ class WiFiScanner:
     def scan_linux(self) -> List[Dict[str, Any]]:
         """Scan WiFi networks on Linux using nmcli."""
         aps = []
+        command = [
+            "nmcli", "-t", "-e", "yes", "-f", "SSID,BSSID,SIGNAL,FREQ,CHAN,SECURITY",
+            "dev", "wifi", "list", "--rescan", "yes"
+        ]
+        observed_bssid_count = 0
+        observed_ssids = set()
         try:
+            if self.interface_name:
+                command.extend(["ifname", self.interface_name])
+
             result = subprocess.run(
-                ["nmcli", "-t", "-f", "SSID,BSSID,SIGNAL,FREQ,CHAN,SECURITY",
-                 "dev", "wifi", "list", "--rescan", "yes"],
-                capture_output=True, text=True, timeout=30
+                command,
+                capture_output=True,
+                text=False,
+                timeout=30,
             )
-            output = result.stdout
+            output = self._decode_output(result.stdout)
 
             for line in output.strip().split("\n"):
                 if not line or line.startswith("SSID"):
                     continue
 
-                fields = line.split(":")
+                observed_bssid_count += 1
+
+                fields = self._split_escaped_fields(line)
 
                 if len(fields) >= 6:
-                    ssid = fields[0].strip() or "Hidden"
-                    bssid = fields[1].strip()
-                    signal_str = fields[2].strip()
-                    freq_str = fields[3].strip()
-                    chan_str = fields[4].strip()
-                    security = fields[5].strip() if len(fields) > 5 else "Unknown"
+                    ssid = self._unescape_nmcli_field(fields[0]) or "Hidden"
+                    bssid = self._unescape_nmcli_field(fields[1]).upper()
+                    signal_str = self._unescape_nmcli_field(fields[2])
+                    freq_str = self._unescape_nmcli_field(fields[3])
+                    chan_str = self._unescape_nmcli_field(fields[4])
+                    security = self._unescape_nmcli_field(fields[5]) if len(fields) > 5 else "Unknown"
+
+                    if not re.match(r"^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$", bssid):
+                        continue
+
+                    observed_ssids.add(ssid)
 
                     try:
                         signal_quality = float(signal_str)
@@ -332,14 +497,23 @@ class WiFiScanner:
         except Exception as e:
             print(f"[scanner] Error scanning Linux: {e}")
 
+        self._record_scan_metrics(
+            command,
+            os_ssid_count=len(observed_ssids),
+            os_bssid_count=observed_bssid_count,
+            parsed_count=len(aps),
+        )
+
         return aps
 
     def _scan_iwlist(self) -> List[Dict[str, Any]]:
         """Fallback WiFi scan using iwlist."""
         aps = []
+        command = ["sudo", "iwlist", self.interface_name or "wlan0", "scan"]
         try:
+            iface = self.interface_name or "wlan0"
             result = subprocess.run(
-                ["sudo", "iwlist", "wlan0", "scan"],
+                ["sudo", "iwlist", iface, "scan"],
                 capture_output=True, text=True, timeout=30
             )
             output = result.stdout
@@ -389,6 +563,13 @@ class WiFiScanner:
 
         except Exception as e:
             print(f"[scanner] Error scanning with iwlist: {e}")
+
+        self._record_scan_metrics(
+            command,
+            os_ssid_count=len({ap.get("ssid", "Hidden") for ap in aps}),
+            os_bssid_count=len(aps),
+            parsed_count=len(aps),
+        )
 
         return aps
 
@@ -470,21 +651,35 @@ class WiFiScanner:
                 "total_scans": self.total_scans,
                 "strongest_signal": max((ap.rssi_mean for ap in aps), default=0),
                 "weakest_signal": min((ap.rssi_mean for ap in aps), default=0),
+                "last_scan_os_ssid_count": self._last_scan_os_ssid_count,
+                "last_scan_os_bssid_count": self._last_scan_os_bssid_count,
+                "last_scan_parsed_count": self._last_scan_parsed_count,
+                "last_scan_command": self._last_scan_command,
+                "last_scan_interface": self.interface_name,
+                "last_scan_timestamp": self._last_scan_timestamp,
             }
 
     def start_continuous_scan(self, interval: float = 2.0):
         """Start continuous scanning in a background thread."""
+        if self._scanning:
+            return
+
         self._scanning = True
         self._scan_interval = interval
         self._scan_thread = threading.Thread(target=self._scan_loop, daemon=True)
         self._scan_thread.start()
-        print(f"[scanner] 🛰️ Continuous scanning started (interval: {interval}s)")
+        iface_msg = f" on {self.interface_name}" if self.interface_name else ""
+        print(f"[scanner] 🛰️ Continuous scanning started{iface_msg} (interval: {interval}s)")
 
     def stop_continuous_scan(self):
         """Stop the continuous scanning loop."""
+        if not self._scanning:
+            return
+
         self._scanning = False
         if self._scan_thread:
             self._scan_thread.join(timeout=5)
+            self._scan_thread = None
         print("[scanner] Scanning stopped")
 
     def _scan_loop(self):
