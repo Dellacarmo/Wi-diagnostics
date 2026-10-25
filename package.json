@@ -1,48 +1,65 @@
 {
-  "name": "rf-space-observatory",
-  "version": "1.0.0",
-  "description": "🛰️ RF Space Observatory — WiFi Network Diagnostic & 3D Visualization",
+  "name": "wi-diagnostics",
+  "version": "2.0.0",
+  "description": "WI//DIAG — visualizador de Wi-Fi: radar no terminal (Bun) e espaço RF 3D no navegador",
   "main": "electron/main.js",
+  "bin": {
+    "wi": "cli/wi.ts"
+  },
   "scripts": {
-    "start": "node start.js",
-    "start:nolog": "node start.js --no-log",
-    "start:electron": "electron .",
-    "start-python": "python python/monitor.py",
+    "start": "bun cli/wi.ts",
+    "cli": "bun cli/wi.ts",
+    "demo": "bun cli/wi.ts --demo",
+    "web": "bun cli/wi.ts web",
+    "web:demo": "bun cli/wi.ts web --demo",
+    "scan": "bun cli/wi.ts scan",
+    "authorize": "bun cli/wi.ts authorize",
+    "oui:update": "bun cli/wi.ts oui update",
+    "typecheck": "tsc -p .",
+    "electron": "electron .",
+    "legacy": "python3 monitor.py",
     "install-python-deps": "pip install -r python/requirements.txt",
-    "dev": "electron . --dev",
     "build": "electron-builder",
     "pack": "electron-builder --dir"
   },
   "author": "Dellacarmo",
   "license": "MIT",
+  "dependencies": {
+    "three": "^0.186.1"
+  },
   "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "bun": "^1.4.4",
     "electron": "^28.0.0",
-    "electron-builder": "^24.9.0"
+    "electron-builder": "^24.9.0",
+    "typescript": "^7.0.2"
   },
   "build": {
-    "appId": "com.dellacarmo.rf-space-observatory",
-    "productName": "RF Space Observatory",
+    "appId": "com.dellacarmo.wi-diagnostics",
+    "productName": "WI//DIAG",
     "directories": {
       "output": "dist"
     },
+    "asar": false,
     "files": [
       "electron/**/*",
-      "src/**/*",
+      "web/**/*",
+      "engine/**/*",
+      "cli/**/*",
+      "server/**/*",
       "python/**/*",
-      "reports/**/*"
+      "node_modules/three/**/*"
     ],
     "win": {
-      "target": "nsis",
-      "icon": "src/assets/icon.ico"
+      "target": "nsis"
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "src/assets/icon.png"
+      "target": "AppImage"
     },
     "extraResources": [
       {
-        "from": "python",
-        "to": "python"
+        "from": "node_modules/bun/bin/bun.exe",
+        "to": "bun/bun.exe"
       }
     ]
   }

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>dev.widiagnostics.wiscan</string>
+	<key>CFBundleName</key>
+	<string>WiScan</string>
+	<key>CFBundleDisplayName</key>
+	<string>Wi-Diagnostics Scanner</string>
+	<key>CFBundleExecutable</key>
+	<string>wiscan</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>2.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>2</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>12.0</string>
+	<key>NSLocationUsageDescription</key>
+	<string>O macOS só revela nomes (SSID) e endereços (BSSID) de redes Wi-Fi para apps com acesso à Localização. A localização em si nunca é lida nem enviada.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>O macOS só revela nomes (SSID) e endereços (BSSID) de redes Wi-Fi para apps com acesso à Localização. A localização em si nunca é lida nem enviada.</string>
+</dict>
+</plist>
