@@ -374,6 +374,7 @@ input[type="search"]:focus {
   align-items: baseline;
   gap: 7px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .lk-diamond {
@@ -382,6 +383,7 @@ input[type="search"]:focus {
 }
 
 #lk-ssid {
+  flex: none;
   color: var(--link);
   font-weight: 700;
   max-width: 170px;
@@ -391,12 +393,16 @@ input[type="search"]:focus {
 }
 
 .lk-sub {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--dim);
   font-size: 10px;
   white-space: nowrap;
 }
 
 .lk-metric {
+  flex: none;
   display: flex;
   align-items: baseline;
   gap: 4px;
@@ -1326,8 +1332,13 @@ input[type="search"]:focus {
 
 /* ─── Responsive ───────────────────────────────────────── */
 
+@media (max-width: 1680px) {
+  .lk-sub {
+    display: none;
+  }
+}
+
 @media (max-width: 1280px) {
-  .lk-sub,
   .lk-metric:nth-of-type(4) {
     display: none;
   }

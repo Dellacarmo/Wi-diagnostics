@@ -36,3 +36,6 @@ desktop.ini
 # Wi-Diagnostics runtime cache (compiled macOS helper, OUI database)
 .cache/
 reports/
+
+# Trailer production workspace (HyperFrames/Remotion projects, footage, audio, renders)
+video/
