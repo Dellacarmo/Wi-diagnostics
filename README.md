@@ -76,6 +76,12 @@ npm run demo         # painel com um ambiente sintético, sem hardware
 
 Com o Bun instalado globalmente, `bun run cli` e `bun run web` também funcionam, e `npm link` deixa o comando `wi` no PATH. `npm run web:demo` abre a visualização 3D com o ambiente sintético.
 
+### App desktop
+
+O GitHub Actions gera o app para macOS (Apple Silicon), Windows e Linux em cada PR e em cada versão, e as versões publicadas ficam em [Releases](https://github.com/Dellacarmo/Wi-diagnostics/releases). Para gerar o instalador do seu sistema, rode `npm run build`.
+
+Os instaladores ainda não têm assinatura de desenvolvedor. No macOS, libere o app em Ajustes do Sistema → Privacidade e Segurança → "Abrir Mesmo Assim". No Windows, clique em "Mais informações" → "Executar mesmo assim".
+
 ## Atalhos
 
 <table>
@@ -203,6 +209,10 @@ O backend Python continua disponível (`npm run legacy` ou `python monitor.py`) 
 ```bash
 pip install -r python/requirements.txt
 ```
+
+## Contribuir
+
+PRs são bem-vindos: veja o [guia de contribuição](CONTRIBUTING.md) e o [código de conduta](CODE_OF_CONDUCT.md). A `main` só recebe código por pull request revisado pelos code owners e com o build passando.
 
 ## Licença
 

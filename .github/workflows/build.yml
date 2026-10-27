@@ -1,0 +1,90 @@
+# Typechecks the code and builds the desktop app (Electron + the bundled Bun engine) natively on
+# macOS, Windows and Linux. Pull requests and pushes to main keep the installers as artifacts for
+# 14 days; a v* tag also drafts a GitHub release with them attached.
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Read-only by default; only the release job asks for write access, and never on pull requests.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: typecheck
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The Bun binary bundled into the app is the runner's own, so each OS/arch builds natively.
+          - name: macOS
+            os: macos-latest
+            flags: --mac --arm64
+          - name: Windows
+            os: windows-latest
+            flags: --win --x64
+          - name: Linux
+            os: ubuntu-latest
+            flags: --linux --x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build installers
+        run: npx electron-builder ${{ matrix.flags }} --publish never
+        env:
+          # No signing certificates yet: macOS gets an ad-hoc signature (electron/after-pack.js).
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WI-DIAG-${{ matrix.name }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.exe
+            dist/*.AppImage
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Draft a release with the installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --draft --generate-notes --title "WI//DIAG $GITHUB_REF_NAME"
