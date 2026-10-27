@@ -23,7 +23,7 @@
     "pack": "electron-builder --dir"
   },
   "author": "Dellacarmo",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {
     "three": "^0.186.1"
   },

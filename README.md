@@ -7,6 +7,7 @@
   <img alt="3D: Three.js" src="https://img.shields.io/badge/3D-Three.js-39FF8F?style=for-the-badge&logo=threedotjs&logoColor=white&labelColor=0b1410">
   <img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-39FF8F?style=for-the-badge&logo=typescript&logoColor=white&labelColor=0b1410">
   <img alt="macOS, Linux e Windows" src="https://img.shields.io/badge/plataformas-macOS%20%C2%B7%20Linux%20%C2%B7%20Windows-22E6FF?style=for-the-badge&labelColor=0b1410">
+  <a href="LICENSE"><img alt="Licença Apache-2.0" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-39FF8F?style=for-the-badge&labelColor=0b1410"></a>
 </p>
 
 <br>
@@ -202,6 +203,10 @@ O backend Python continua disponível (`npm run legacy` ou `python monitor.py`) 
 ```bash
 pip install -r python/requirements.txt
 ```
+
+## Licença
+
+[Apache-2.0](LICENSE). Quem usar o código precisa manter os créditos do [NOTICE](NOTICE) e indicar o que mudou. A licença não dá direito ao nome WI//DIAG nem à marca ◢◤.
 
 <br>
 
