@@ -37,12 +37,16 @@
   "build": {
     "appId": "com.dellacarmo.wi-diagnostics",
     "productName": "WI//DIAG",
+    "artifactName": "WI-DIAG-${version}-${os}-${arch}.${ext}",
+    "icon": "electron/icon.png",
+    "afterPack": "electron/after-pack.js",
     "directories": {
       "output": "dist"
     },
     "asar": false,
     "files": [
       "electron/**/*",
+      "!electron/after-pack.js",
       "web/**/*",
       "engine/**/*",
       "cli/**/*",
