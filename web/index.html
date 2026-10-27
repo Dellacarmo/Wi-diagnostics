@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WI//DIAG — Espaço RF</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/vendor/three/build/three.module.js",
+          "three/addons/": "/vendor/three/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="stage"></div>
+
+    <!-- Boot -->
+    <div id="boot" class="boot">
+      <canvas id="boot-rain"></canvas>
+      <div class="boot-center">
+        <div class="boot-logo" id="boot-logo">WI//DIAG</div>
+        <div class="boot-sub" id="boot-sub">conectando ao engine…</div>
+        <div class="boot-bar"><i id="boot-bar"></i></div>
+      </div>
+    </div>
+
+    <div id="hud" class="hud">
+      <!-- Top bar -->
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">◢◤</span>
+          <span class="brand-name">WI<b>//</b>DIAG</span>
+          <span class="brand-ver" id="ver">v2</span>
+        </div>
+
+        <div class="pill status" id="status">
+          <i class="dot"></i><span id="status-text">conectando</span>
+        </div>
+
+        <div class="linkbar" id="linkbar" hidden>
+          <div class="lk-id">
+            <span class="lk-diamond">◆</span>
+            <span id="lk-ssid">—</span>
+            <span class="lk-sub" id="lk-sub"></span>
+          </div>
+          <div class="lk-metric"><label>RSSI</label><b id="lk-rssi">—</b><small>dBm</small></div>
+          <div class="lk-metric"><label>SNR</label><b id="lk-snr">—</b><small>dB</small></div>
+          <div class="lk-metric"><label>TX</label><b id="lk-tx">—</b><small>Mbps</small></div>
+          <div class="lk-metric"><label>GW</label><b id="lk-gw">—</b><small>ms</small></div>
+          <div class="lk-metric"><label>NET</label><b id="lk-net">—</b><small>ms</small></div>
+          <div class="lk-quality" title="Qualidade composta do link">
+            <svg viewBox="0 0 36 36"><circle class="track" cx="18" cy="18" r="15" /><circle class="arc" id="lk-q-arc" cx="18" cy="18" r="15" /></svg>
+            <span id="lk-q">—</span>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <div class="seg" id="cam-seg" title="Câmera (1·2·3)">
+            <button data-cam="orbit" class="on">Órbita</button>
+            <button data-cam="radar">Radar</button>
+            <button data-cam="ground">Solo</button>
+          </div>
+          <select id="env" title="Modelo de propagação">
+            <option value="open">Espaço aberto</option>
+            <option value="residential" selected>Residencial</option>
+            <option value="office">Escritório</option>
+            <option value="dense">Prédio denso</option>
+          </select>
+          <div class="menu" id="view-menu">
+            <button class="icon-btn" data-menu title="Camadas">
+              <svg viewBox="0 0 24 24"><path d="M12 3 2 8l10 5 10-5-10-5Z" /><path d="m2 13 10 5 10-5" /></svg>
+            </button>
+            <div class="menu-pop">
+              <label><input type="checkbox" id="opt-field" checked /> Campo RF <kbd>F</kbd></label>
+              <label><input type="checkbox" id="opt-beams" checked /> Feixes de sinal</label>
+              <label><input type="checkbox" id="opt-rain" checked /> Chuva digital <kbd>R</kbd></label>
+              <label><input type="checkbox" id="opt-rotate" checked /> Auto-rotação <kbd>␣</kbd></label>
+              <div class="menu-sep"></div>
+              <div class="menu-title">Rótulos <kbd>L</kbd></div>
+              <div class="seg small" id="label-seg">
+                <button data-labels="auto" class="on">Auto</button>
+                <button data-labels="all">Todos</button>
+                <button data-labels="off">Off</button>
+              </div>
+            </div>
+          </div>
+          <div class="menu" id="export-menu">
+            <button class="icon-btn" data-menu title="Exportar">
+              <svg viewBox="0 0 24 24"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
+            </button>
+            <div class="menu-pop">
+              <button data-export="png">Captura da cena (PNG)</button>
+              <button data-export="csv">Redes (CSV)</button>
+              <button data-export="json">Snapshot completo (JSON)</button>
+              <div class="menu-sep"></div>
+              <button data-export="pdf">Relatório PDF</button>
+              <button data-export="word">Relatório DOCX</button>
+              <button data-export="excel">Planilha XLSX</button>
+            </div>
+          </div>
+          <button class="icon-btn" id="btn-cinema" title="Modo cinema (H)">
+            <svg viewBox="0 0 24 24"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="notice" id="notice" hidden>
+        <span id="notice-text"></span>
+        <button id="notice-close" aria-label="Fechar">×</button>
+      </div>
+
+      <!-- Networks -->
+      <aside class="panel networks" id="networks">
+        <div class="panel-head">
+          <h2>Redes <span class="count" id="net-count">0</span></h2>
+          <button class="icon-btn small" id="collapse-networks" title="Recolher (N)">
+            <svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6" /></svg>
+          </button>
+        </div>
+        <div class="net-tools">
+          <input id="search" type="search" placeholder="Buscar  /" autocomplete="off" />
+          <div class="chips" id="band-chips">
+            <button data-band="all" class="on">Todas</button>
+            <button data-band="2.4">2.4</button>
+            <button data-band="5">5</button>
+            <button data-band="6">6</button>
+          </div>
+          <select id="sort" title="Ordenar">
+            <option value="signal">Sinal</option>
+            <option value="distance">Distância</option>
+            <option value="channel">Canal</option>
+            <option value="name">Nome</option>
+          </select>
+        </div>
+        <ul class="net-list" id="net-list"></ul>
+        <div class="net-foot" id="net-foot"></div>
+      </aside>
+      <button class="panel-tab" id="networks-tab" hidden>REDES</button>
+
+      <!-- Inspector -->
+      <aside class="panel inspector" id="inspector" hidden>
+        <div class="ins-head">
+          <div>
+            <div class="ins-badges" id="ins-badges"></div>
+            <h2 id="ins-name">—</h2>
+            <div class="ins-sub" id="ins-sub"></div>
+          </div>
+          <button class="icon-btn small" id="ins-close" title="Fechar (Esc)">×</button>
+        </div>
+        <div class="ins-gauges">
+          <div class="gauge" id="g-rssi">
+            <svg viewBox="0 0 100 60"><path class="g-track" d="M10 55 A40 40 0 0 1 90 55" /><path class="g-arc" id="g-rssi-arc" d="M10 55 A40 40 0 0 1 90 55" /></svg>
+            <b id="g-rssi-val">—</b><label>dBm</label>
+          </div>
+          <div class="dist">
+            <label>Distância estimada</label>
+            <b id="ins-dist">—</b>
+            <div class="range"><i id="ins-range-bar"></i><span id="ins-range-dot"></span></div>
+            <small id="ins-range">—</small>
+          </div>
+        </div>
+        <canvas class="ins-spark" id="ins-spark" height="70"></canvas>
+        <dl class="kv" id="ins-kv"></dl>
+        <div class="interf">
+          <div class="interf-head"><label>Interferência</label><b id="ins-int">—</b></div>
+          <div class="meter"><i id="ins-int-bar"></i></div>
+          <div class="neighbors" id="ins-neighbors"></div>
+        </div>
+        <div class="ins-actions">
+          <button id="ins-focus">Centralizar câmera</button>
+        </div>
+      </aside>
+
+      <!-- Dock -->
+      <section class="dock" id="dock">
+        <div class="dock-tabs">
+          <button data-tab="spectrum" class="on">Espectro</button>
+          <button data-tab="latency">Latência</button>
+          <button data-tab="events">Eventos <span class="count" id="ev-count">0</span></button>
+          <div class="dock-right">
+            <div class="chips" id="spec-bands">
+              <button data-sband="2.4" class="on">2.4 GHz</button>
+              <button data-sband="5">5 GHz</button>
+              <button data-sband="6">6 GHz</button>
+            </div>
+            <span class="dock-info" id="dock-info"></span>
+            <button class="icon-btn small" id="collapse-dock" title="Recolher (D)">
+              <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+          </div>
+        </div>
+        <div class="dock-body">
+          <canvas id="spectrum" data-pane="spectrum"></canvas>
+          <canvas id="latency" data-pane="latency" hidden></canvas>
+          <ul class="events" id="events" data-pane="events" hidden></ul>
+        </div>
+      </section>
+      <button class="dock-tab" id="dock-tab" hidden>ESPECTRO · LATÊNCIA · EVENTOS</button>
+
+      <div class="toasts" id="toasts"></div>
+      <div class="tooltip" id="tooltip" hidden></div>
+      <div class="hints" id="hints">
+        <span><kbd>H</kbd> cinema</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> câmera</span><span><kbd>↑</kbd><kbd>↓</kbd> redes</span><span><kbd>F</kbd> campo RF</span>
+      </div>
+    </div>
+
+    <script type="module" src="/js/main.js"></script>
+  </body>
+</html>

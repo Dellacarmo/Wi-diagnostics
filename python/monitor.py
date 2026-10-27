@@ -192,7 +192,7 @@ class RFSpaceObservatory:
         print(f"[observatory] 📡 Log listener: UDP port {self.log_listener.port}")
         print(f"[observatory] 🛰️ WiFi scanning: every {self.scanner._scan_interval}s")
         print(f"[observatory] 🔎 Scan source: {self.network_config.scan_interface or 'auto'}")
-        print(f"[observatory] 💻 Open frontend: src/index.html")
+        print("[observatory] 💻 Visualização 3D: bun run web  ·  painel no terminal: bun run cli")
         print()
         print("[observatory] Press Ctrl+C to stop and generate report...")
         print()
