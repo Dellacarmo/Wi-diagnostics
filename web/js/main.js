@@ -5,6 +5,7 @@ import { RFScene } from "./scene.js";
 import { Hud } from "./hud.js";
 import { LatencyChart, SpectrumChart } from "./charts.js";
 import { GLYPHS } from "./util.js";
+import { setLang, t } from "./i18n.js";
 
 const $ = (id) => document.getElementById(id);
 const prefs = (() => {
@@ -79,7 +80,7 @@ const boot = (() => {
 
 // ─── App ──────────────────────────────────────────────────────────────────
 
-boot.progress(15, "inicializando renderer WebGL…");
+boot.progress(15, t("boot.renderer"));
 const scene = new RFScene($("stage"));
 const hud = new Hud();
 const store = new Store();
@@ -118,7 +119,7 @@ function drawDock() {
   const spec = snap.spectrum.find((b) => b.band === spectrum.band);
   $("dock-info").innerHTML =
     dockTab === "spectrum" && spec?.best
-      ? `melhor canal <b>${spec.best.channel}</b> · ${spec.best.width} MHz · ocupação ${(spec.best.load * 100).toFixed(0)}%`
+      ? `${t("dock.bestChannel")} <b>${spec.best.channel}</b> · ${spec.best.width} MHz · ${t("dock.load")} ${(spec.best.load * 100).toFixed(0)}%`
       : dockTab === "latency"
         ? `${snap.link.verdict}`
         : "";
@@ -141,7 +142,7 @@ store.addEventListener("snapshot", (e) => {
   const { snap } = e.detail;
   if (firstSnapshot) {
     firstSnapshot = false;
-    boot.progress(100, `${snap.source.label} · ${snap.networks.length} rádios`);
+    boot.progress(100, `${snap.source.label} · ${t("boot.radios", { n: snap.networks.length })}`);
     boot.finish();
     if (snap.link.band) setSpectrumBand(snap.link.band);
   }
@@ -151,7 +152,7 @@ store.addEventListener("snapshot", (e) => {
   render();
 });
 store.addEventListener("status", () => render());
-boot.progress(45, "conectando ao engine…");
+boot.progress(45, t("boot.connecting"));
 store.start();
 
 // Scene interactions
@@ -246,9 +247,10 @@ $("cam-seg").addEventListener("click", (e) => {
 // Environment model
 $("env").addEventListener("change", (e) => {
   store.send({ type: "env", preset: e.target.value });
-  hud.toast(`Modelo de propagação: ${e.target.selectedOptions[0].textContent}`);
+  hud.toast(t("toast.envModel", { v: e.target.selectedOptions[0].textContent }));
 });
 $("env").addEventListener("blur", () => syncEnv());
+$("lang").addEventListener("change", (e) => setLang(e.target.value));
 
 // Menus
 document.querySelectorAll(".menu").forEach((menu) => {
@@ -315,14 +317,14 @@ document.querySelector("#export-menu .menu-pop").addEventListener("click", async
     download(`wi-snapshot-${stamp}.json`, url);
     return setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
-  hud.toast(`Gerando relatório ${kind.toUpperCase()}…`);
+  hud.toast(t("toast.reportBusy", { k: kind.toUpperCase() }));
   try {
     const res = await fetch(`/api/report?format=${kind}`, { method: "POST" });
     const body = await res.json();
-    if (body.ok) hud.toast(`Relatório salvo: ${Object.values(body.files).join(", ")}`, "var(--good)");
-    else hud.toast(`Relatório indisponível: ${body.error}`, "var(--warn)");
+    if (body.ok) hud.toast(t("toast.reportSaved", { v: Object.values(body.files).join(", ") }), "var(--good)");
+    else hud.toast(t("toast.reportUnavailable", { v: body.error }), "var(--warn)");
   } catch (err) {
-    hud.toast(`Falha: ${err.message}`, "var(--bad)");
+    hud.toast(t("toast.failed", { v: err.message }), "var(--bad)");
   }
 });
 

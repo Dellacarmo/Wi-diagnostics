@@ -1,5 +1,6 @@
 // Dock charts: spectrum analyzer, latency timeline and the inspector sparkline.
 
+import { t } from "./i18n.js";
 import { BAND_CSS, LINK_CSS, fitCanvas, hexToRgba, rssiCss } from "./util.js";
 
 const TICKS = {
@@ -222,8 +223,8 @@ export class LatencyChart {
       ctx.fillText(s.name, w - 146, y);
       ctx.fillStyle = "rgba(111,156,128,0.9)";
       const fmt = (v) => (v == null ? "—" : `${v.toFixed(1)}ms`);
-      ctx.fillText(`méd ${fmt(p.avg)}  jit ${fmt(p.jitter)}`, w - 146, y + 15);
-      ctx.fillText(`mín ${fmt(p.min)}  perda ${(p.loss * 100).toFixed(0)}%`, w - 146, y + 29);
+      ctx.fillText(`${t("latency.avg")} ${fmt(p.avg)}  ${t("latency.jitter")} ${fmt(p.jitter)}`, w - 146, y + 15);
+      ctx.fillText(`${t("latency.min")} ${fmt(p.min)}  ${t("latency.loss")} ${(p.loss * 100).toFixed(0)}%`, w - 146, y + 29);
       y += 52;
     }
   }
