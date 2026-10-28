@@ -1,6 +1,7 @@
 // DOM overlay: link bar, network list, inspector, events and toasts.
 
 import { drawSparkline } from "./charts.js";
+import { t } from "./i18n.js";
 import { BAND_CSS, GRADE_CSS, LINK_CSS, ago, clock, esc, fmtDist, fmtMs, isDfs, levelCss, rssiCss, rssiLabel } from "./util.js";
 
 const $ = (id) => document.getElementById(id);
@@ -87,7 +88,7 @@ export class Hud extends EventTarget {
     const el = $("status");
     const kind = !connected ? "off" : snap.source.kind === "demo" ? "demo" : "live";
     el.className = `pill status ${kind}`;
-    $("status-text").textContent = !connected ? "engine offline — reconectando" : `${kind === "demo" ? "DEMO" : "AO VIVO"} · ${snap.source.label}`;
+    $("status-text").textContent = !connected ? t("status.offline") : `${kind === "demo" ? t("status.demo") : t("status.live")} · ${snap.source.label}`;
     $("ver").textContent = `v${snap.version}`;
   }
 
@@ -141,7 +142,7 @@ export class Hud extends EventTarget {
       })
       .join("");
     const best = snap.spectrum.map((b) => (b.best ? `${b.band}→${b.best.channel}` : null)).filter(Boolean).join(" · ");
-    $("net-foot").innerHTML = `scan #${snap.scan.count}${snap.scan.durationMs ? ` · ${(snap.scan.durationMs / 1000).toFixed(1)}s` : ""} · ${esc(snap.env.label)} n=${snap.env.exponent}<br>melhores canais: ${best || "—"}`;
+    $("net-foot").innerHTML = `scan #${snap.scan.count}${snap.scan.durationMs ? ` · ${(snap.scan.durationMs / 1000).toFixed(1)}s` : ""} · ${esc(snap.env.label)} n=${snap.env.exponent}<br>${t("net.bestChannels")} ${best || "—"}`;
   }
 
   #inspector(snap) {
@@ -155,15 +156,15 @@ export class Hud extends EventTarget {
     const color = n.connected ? LINK_CSS : BAND_CSS[n.band];
     panel.style.setProperty("--accent", color);
     const badges = [
-      n.connected ? `<span class="badge" style="color:${LINK_CSS}">◆ conectada</span>` : "",
+      n.connected ? `<span class="badge" style="color:${LINK_CSS}">◆ ${t("status.connected")}</span>` : "",
       `<span class="badge" style="color:${BAND_CSS[n.band]}">${n.band} GHz</span>`,
       `<span class="badge" style="color:${GRADE_CSS[n.securityGrade]}">${esc(n.security)} · ${n.securityGrade}</span>`,
-      n.stale ? `<span class="badge" style="color:var(--dim)">fora do último scan</span>` : "",
+      n.stale ? `<span class="badge" style="color:var(--dim)">${t("badge.stale")}</span>` : "",
       isDfs(n.channel, n.band) ? `<span class="badge" style="color:var(--warn)">DFS</span>` : "",
     ];
     $("ins-badges").innerHTML = badges.join("");
     $("ins-name").textContent = n.name;
-    $("ins-sub").textContent = n.ssid ? `${n.bssid ?? "BSSID oculto"}${n.vendor ? " · " + n.vendor : ""}` : n.redacted ? "SSID oculto pelo SO" : "rede oculta (SSID não anunciado)";
+    $("ins-sub").textContent = n.ssid ? `${n.bssid ?? t("ins.bssidHidden")}${n.vendor ? " · " + n.vendor : ""}` : n.redacted ? t("ins.ssidHiddenOs") : t("ins.hiddenNet");
 
     const arc = $("g-rssi-arc");
     const q = Math.min(Math.max((n.rssi + 95) / 65, 0), 1);
@@ -178,22 +179,22 @@ export class Hud extends EventTarget {
     bar.style.left = `${scale(n.distance.min)}%`;
     bar.style.width = `${Math.max(scale(n.distance.max) - scale(n.distance.min), 2)}%`;
     $("ins-range-dot").style.left = `${scale(n.distance.est)}%`;
-    $("ins-range").textContent = `faixa provável ${fmtDist(n.distance.min)} – ${fmtDist(n.distance.max)} · modelo ${snap.env.label}`;
+    $("ins-range").textContent = `${t("ins.range")} ${fmtDist(n.distance.min)} – ${fmtDist(n.distance.max)} · ${t("ins.model")} ${snap.env.label}`;
 
     drawSparkline($("ins-spark"), n.history, rssiCss(n.rssi));
 
     const rows = [
-      ["Sinal", `${Math.round(n.rssi)} dBm <em>· ${rssiLabel(n.rssi)} · σ ${n.rssiStd} dB · pico ${n.rssiPeak}</em>`],
-      ["SNR", n.snr != null ? `${n.snr} dB <em>· ruído ${n.noise} dBm</em>` : "<em>não reportado</em>"],
-      ["Canal", `${n.channel} <em>· ${n.freq} MHz · ${n.width} MHz</em>`],
-      ["Espectro", `${n.span[0]}–${n.span[1]} MHz`],
+      [t("row.signal"), `${Math.round(n.rssi)} dBm <em>· ${rssiLabel(n.rssi)} · σ ${n.rssiStd} dB · ${t("row.peak")} ${n.rssiPeak}</em>`],
+      ["SNR", n.snr != null ? `${n.snr} dB <em>· ${t("row.noise")} ${n.noise} dBm</em>` : `<em>${t("row.notReported")}</em>`],
+      [t("row.channel"), `${n.channel} <em>· ${n.freq} MHz · ${n.width} MHz</em>`],
+      [t("row.spectrum"), `${n.span[0]}–${n.span[1]} MHz`],
       ["PHY", `${esc(n.phy)} <em>· ${esc(n.generation)}</em>`],
-      ["Taxa máx.", n.maxRate ? `~${n.maxRate} Mbps <em>(2×2)</em>` : "—"],
-      ["Azimute", `${Math.round((n.position.azimuth * 180) / Math.PI)}° <em>· estimado · confiança ${Math.round(n.position.confidence * 100)}%</em>`],
-      ["BSSID", n.bssid ? `${esc(n.bssid)}${n.randomizedMac ? " <em>· local</em>" : ""}` : "<em>oculto</em>"],
-      ["Fabricante", esc(n.vendor ?? "—")],
+      [t("row.maxRate"), n.maxRate ? `~${n.maxRate} Mbps <em>(2×2)</em>` : "—"],
+      [t("row.azimuth"), `${Math.round((n.position.azimuth * 180) / Math.PI)}° <em>· ${t("row.estimated")} · ${t("row.confidence")} ${Math.round(n.position.confidence * 100)}%</em>`],
+      ["BSSID", n.bssid ? `${esc(n.bssid)}${n.randomizedMac ? ` <em>· ${t("row.local")}</em>` : ""}` : `<em>${t("row.hidden")}</em>`],
+      [t("row.vendor"), esc(n.vendor ?? "—")],
       ["Beacon", n.beaconInterval ? `${n.beaconInterval} TU` : "—"],
-      ["Visto", `há ${ago(n.firstSeen)} <em>· ${n.samples} amostras</em>`],
+      [t("row.seen"), `${t("row.ago", { v: ago(n.firstSeen) })} <em>· ${t("row.samples", { n: n.samples })}</em>`],
     ];
     $("ins-kv").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
 
@@ -209,7 +210,7 @@ export class Hud extends EventTarget {
       .filter(Boolean)
       .map((m) => `<button data-id="${esc(m.id)}" style="border-color:${BAND_CSS[m.band]}55">${esc(m.name)} · ${Math.round(m.rssi)}</button>`);
     $("ins-neighbors").innerHTML =
-      `<span class="none">${it.cochannel} co-canal · ${it.overlapping} parcial</span>` + (neighbors.length ? neighbors.join("") : "");
+      `<span class="none">${t("interf.cochannel", { n: it.cochannel })} · ${t("interf.partial", { n: it.overlapping })}</span>` + (neighbors.length ? neighbors.join("") : "");
   }
 
   #events(snap) {

@@ -1361,6 +1361,7 @@ input[type="search"]:focus {
   .brand-ver,
   #cam-seg,
   #env,
+  #lang,
   .status {
     display: none !important;
   }

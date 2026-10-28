@@ -1,5 +1,7 @@
 // Shared helpers for the web frontend (mirrors engine/rf.ts where needed).
 
+import { locale, t } from "./i18n.js";
+
 export const WORLD_R = 40; // scene units for MAX_M meters
 export const MAX_M = 60;
 const LOG_MAX = Math.log1p(MAX_M / 2);
@@ -27,11 +29,11 @@ export function rssiCss(rssi) {
 }
 
 export function rssiLabel(rssi) {
-  if (rssi >= -55) return "excelente";
-  if (rssi >= -67) return "bom";
-  if (rssi >= -75) return "razoável";
-  if (rssi >= -82) return "fraco";
-  return "crítico";
+  if (rssi >= -55) return t("rssi.excellent");
+  if (rssi >= -67) return t("rssi.good");
+  if (rssi >= -75) return t("rssi.fair");
+  if (rssi >= -82) return t("rssi.weak");
+  return t("rssi.critical");
 }
 
 export const levelCss = (l) => (l === "good" ? "#3dff9e" : l === "warn" ? "#ffc145" : l === "bad" ? "#ff4d6d" : "#7fd6ff");
@@ -46,7 +48,7 @@ export function ago(t) {
   return `${Math.floor(s / 3600)} h`;
 }
 
-export const clock = (t) => new Date(t).toLocaleTimeString("pt-BR", { hour12: false });
+export const clock = (time) => new Date(time).toLocaleTimeString(locale, { hour12: false });
 
 export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);

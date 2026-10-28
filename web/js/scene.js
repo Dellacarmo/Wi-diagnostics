@@ -9,6 +9,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { CSS2DObject, CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
+import { t } from "./i18n.js";
 import { BAND_CSS, BAND_HEX, GLYPHS, LINK_CSS, LINK_HEX, REF_RSSI, RING_METERS, WORLD_R, esc, fmtDist, fromScene, toScene } from "./util.js";
 
 const TAU = Math.PI * 2;
@@ -341,7 +342,7 @@ export class RFScene extends EventTarget {
     beam.position.y = -1.2;
     you.add(beam);
     const youLabel = cssLabel("you-label");
-    youLabel.el.textContent = "VOCÊ";
+    youLabel.el.textContent = t("scene.you");
     you.add(youLabel.label);
     s.add(you);
     this.you = { group: you, cage, halo };

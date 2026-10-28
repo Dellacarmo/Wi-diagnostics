@@ -28,7 +28,7 @@
       <canvas id="boot-rain"></canvas>
       <div class="boot-center">
         <div class="boot-logo" id="boot-logo">WI//DIAG</div>
-        <div class="boot-sub" id="boot-sub">conectando ao engine…</div>
+        <div class="boot-sub" id="boot-sub" data-i18n="boot.connecting">conectando ao engine…</div>
         <div class="boot-bar"><i id="boot-bar"></i></div>
       </div>
     </div>
@@ -64,50 +64,54 @@
         </div>
 
         <div class="top-actions">
-          <div class="seg" id="cam-seg" title="Câmera (1·2·3)">
-            <button data-cam="orbit" class="on">Órbita</button>
-            <button data-cam="radar">Radar</button>
-            <button data-cam="ground">Solo</button>
+          <div class="seg" id="cam-seg" data-i18n-title="cam.title" title="Câmera (1·2·3)">
+            <button data-cam="orbit" class="on" data-i18n="cam.orbit">Órbita</button>
+            <button data-cam="radar" data-i18n="cam.radar">Radar</button>
+            <button data-cam="ground" data-i18n="cam.ground">Solo</button>
           </div>
-          <select id="env" title="Modelo de propagação">
-            <option value="open">Espaço aberto</option>
-            <option value="residential" selected>Residencial</option>
-            <option value="office">Escritório</option>
-            <option value="dense">Prédio denso</option>
+          <select id="env" data-i18n-title="env.title" title="Modelo de propagação">
+            <option value="open" data-i18n="env.open">Espaço aberto</option>
+            <option value="residential" selected data-i18n="env.residential">Residencial</option>
+            <option value="office" data-i18n="env.office">Escritório</option>
+            <option value="dense" data-i18n="env.dense">Prédio denso</option>
+          </select>
+          <select id="lang" data-i18n-title="lang.title" title="Idioma / Language">
+            <option value="pt">Português</option>
+            <option value="en">English</option>
           </select>
           <div class="menu" id="view-menu">
-            <button class="icon-btn" data-menu title="Camadas">
+            <button class="icon-btn" data-menu data-i18n-title="layers.title" title="Camadas">
               <svg viewBox="0 0 24 24"><path d="M12 3 2 8l10 5 10-5-10-5Z" /><path d="m2 13 10 5 10-5" /></svg>
             </button>
             <div class="menu-pop">
-              <label><input type="checkbox" id="opt-field" checked /> Campo RF <kbd>F</kbd></label>
-              <label><input type="checkbox" id="opt-beams" checked /> Feixes de sinal</label>
-              <label><input type="checkbox" id="opt-rain" checked /> Chuva digital <kbd>R</kbd></label>
-              <label><input type="checkbox" id="opt-rotate" checked /> Auto-rotação <kbd>␣</kbd></label>
+              <label><input type="checkbox" id="opt-field" checked /> <span data-i18n="layers.field">Campo RF</span> <kbd>F</kbd></label>
+              <label><input type="checkbox" id="opt-beams" checked /> <span data-i18n="layers.beams">Feixes de sinal</span></label>
+              <label><input type="checkbox" id="opt-rain" checked /> <span data-i18n="layers.rain">Chuva digital</span> <kbd>R</kbd></label>
+              <label><input type="checkbox" id="opt-rotate" checked /> <span data-i18n="layers.rotate">Auto-rotação</span> <kbd>␣</kbd></label>
               <div class="menu-sep"></div>
-              <div class="menu-title">Rótulos <kbd>L</kbd></div>
+              <div class="menu-title"><span data-i18n="labels.title">Rótulos</span> <kbd>L</kbd></div>
               <div class="seg small" id="label-seg">
-                <button data-labels="auto" class="on">Auto</button>
-                <button data-labels="all">Todos</button>
-                <button data-labels="off">Off</button>
+                <button data-labels="auto" class="on" data-i18n="labels.auto">Auto</button>
+                <button data-labels="all" data-i18n="labels.all">Todos</button>
+                <button data-labels="off" data-i18n="labels.off">Off</button>
               </div>
             </div>
           </div>
           <div class="menu" id="export-menu">
-            <button class="icon-btn" data-menu title="Exportar">
+            <button class="icon-btn" data-menu data-i18n-title="export.title" title="Exportar">
               <svg viewBox="0 0 24 24"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
             </button>
             <div class="menu-pop">
-              <button data-export="png">Captura da cena (PNG)</button>
-              <button data-export="csv">Redes (CSV)</button>
-              <button data-export="json">Snapshot completo (JSON)</button>
+              <button data-export="png" data-i18n="export.png">Captura da cena (PNG)</button>
+              <button data-export="csv" data-i18n="export.csv">Redes (CSV)</button>
+              <button data-export="json" data-i18n="export.json">Snapshot completo (JSON)</button>
               <div class="menu-sep"></div>
-              <button data-export="pdf">Relatório PDF</button>
-              <button data-export="word">Relatório DOCX</button>
-              <button data-export="excel">Planilha XLSX</button>
+              <button data-export="pdf" data-i18n="export.pdf">Relatório PDF</button>
+              <button data-export="word" data-i18n="export.word">Relatório DOCX</button>
+              <button data-export="excel" data-i18n="export.excel">Planilha XLSX</button>
             </div>
           </div>
-          <button class="icon-btn" id="btn-cinema" title="Modo cinema (H)">
+          <button class="icon-btn" id="btn-cinema" data-i18n-title="cinema.title" title="Modo cinema (H)">
             <svg viewBox="0 0 24 24"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4" /></svg>
           </button>
         </div>
@@ -115,36 +119,36 @@
 
       <div class="notice" id="notice" hidden>
         <span id="notice-text"></span>
-        <button id="notice-close" aria-label="Fechar">×</button>
+        <button id="notice-close" data-i18n-title="common.close" aria-label="Fechar">×</button>
       </div>
 
       <!-- Networks -->
       <aside class="panel networks" id="networks">
         <div class="panel-head">
-          <h2>Redes <span class="count" id="net-count">0</span></h2>
-          <button class="icon-btn small" id="collapse-networks" title="Recolher (N)">
+          <h2><span data-i18n="networks.title">Redes</span> <span class="count" id="net-count">0</span></h2>
+          <button class="icon-btn small" id="collapse-networks" data-i18n-title="networks.collapse" title="Recolher (N)">
             <svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6" /></svg>
           </button>
         </div>
         <div class="net-tools">
-          <input id="search" type="search" placeholder="Buscar  /" autocomplete="off" />
+          <input id="search" type="search" data-i18n-placeholder="networks.search" placeholder="Buscar  /" autocomplete="off" />
           <div class="chips" id="band-chips">
-            <button data-band="all" class="on">Todas</button>
+            <button data-band="all" class="on" data-i18n="bands.all">Todas</button>
             <button data-band="2.4">2.4</button>
             <button data-band="5">5</button>
             <button data-band="6">6</button>
           </div>
-          <select id="sort" title="Ordenar">
-            <option value="signal">Sinal</option>
-            <option value="distance">Distância</option>
-            <option value="channel">Canal</option>
-            <option value="name">Nome</option>
+          <select id="sort" data-i18n-title="networks.sort" title="Ordenar">
+            <option value="signal" data-i18n="sort.signal">Sinal</option>
+            <option value="distance" data-i18n="sort.distance">Distância</option>
+            <option value="channel" data-i18n="sort.channel">Canal</option>
+            <option value="name" data-i18n="sort.name">Nome</option>
           </select>
         </div>
         <ul class="net-list" id="net-list"></ul>
         <div class="net-foot" id="net-foot"></div>
       </aside>
-      <button class="panel-tab" id="networks-tab" hidden>REDES</button>
+      <button class="panel-tab" id="networks-tab" data-i18n="networks.tab" hidden>REDES</button>
 
       <!-- Inspector -->
       <aside class="panel inspector" id="inspector" hidden>
@@ -154,7 +158,7 @@
             <h2 id="ins-name">—</h2>
             <div class="ins-sub" id="ins-sub"></div>
           </div>
-          <button class="icon-btn small" id="ins-close" title="Fechar (Esc)">×</button>
+          <button class="icon-btn small" id="ins-close" data-i18n-title="ins.close" title="Fechar (Esc)">×</button>
         </div>
         <div class="ins-gauges">
           <div class="gauge" id="g-rssi">
@@ -162,7 +166,7 @@
             <b id="g-rssi-val">—</b><label>dBm</label>
           </div>
           <div class="dist">
-            <label>Distância estimada</label>
+            <label data-i18n="ins.distance">Distância estimada</label>
             <b id="ins-dist">—</b>
             <div class="range"><i id="ins-range-bar"></i><span id="ins-range-dot"></span></div>
             <small id="ins-range">—</small>
@@ -171,21 +175,21 @@
         <canvas class="ins-spark" id="ins-spark" height="70"></canvas>
         <dl class="kv" id="ins-kv"></dl>
         <div class="interf">
-          <div class="interf-head"><label>Interferência</label><b id="ins-int">—</b></div>
+          <div class="interf-head"><label data-i18n="ins.interference">Interferência</label><b id="ins-int">—</b></div>
           <div class="meter"><i id="ins-int-bar"></i></div>
           <div class="neighbors" id="ins-neighbors"></div>
         </div>
         <div class="ins-actions">
-          <button id="ins-focus">Centralizar câmera</button>
+          <button id="ins-focus" data-i18n="ins.focus">Centralizar câmera</button>
         </div>
       </aside>
 
       <!-- Dock -->
       <section class="dock" id="dock">
         <div class="dock-tabs">
-          <button data-tab="spectrum" class="on">Espectro</button>
-          <button data-tab="latency">Latência</button>
-          <button data-tab="events">Eventos <span class="count" id="ev-count">0</span></button>
+          <button data-tab="spectrum" class="on" data-i18n="dock.spectrum">Espectro</button>
+          <button data-tab="latency" data-i18n="dock.latency">Latência</button>
+          <button data-tab="events"><span data-i18n="dock.events">Eventos</span> <span class="count" id="ev-count">0</span></button>
           <div class="dock-right">
             <div class="chips" id="spec-bands">
               <button data-sband="2.4" class="on">2.4 GHz</button>
@@ -193,7 +197,7 @@
               <button data-sband="6">6 GHz</button>
             </div>
             <span class="dock-info" id="dock-info"></span>
-            <button class="icon-btn small" id="collapse-dock" title="Recolher (D)">
+            <button class="icon-btn small" id="collapse-dock" data-i18n-title="dock.collapse" title="Recolher (D)">
               <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
             </button>
           </div>
@@ -204,12 +208,12 @@
           <ul class="events" id="events" data-pane="events" hidden></ul>
         </div>
       </section>
-      <button class="dock-tab" id="dock-tab" hidden>ESPECTRO · LATÊNCIA · EVENTOS</button>
+      <button class="dock-tab" id="dock-tab" data-i18n="dock.tab" hidden>ESPECTRO · LATÊNCIA · EVENTOS</button>
 
       <div class="toasts" id="toasts"></div>
       <div class="tooltip" id="tooltip" hidden></div>
       <div class="hints" id="hints">
-        <span><kbd>H</kbd> cinema</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> câmera</span><span><kbd>↑</kbd><kbd>↓</kbd> redes</span><span><kbd>F</kbd> campo RF</span>
+        <span><kbd>H</kbd> <span data-i18n="hint.cinema">cinema</span></span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <span data-i18n="hint.camera">câmera</span></span><span><kbd>↑</kbd><kbd>↓</kbd> <span data-i18n="hint.networks">redes</span></span><span><kbd>F</kbd> <span data-i18n="hint.field">campo RF</span></span>
       </div>
     </div>
 
